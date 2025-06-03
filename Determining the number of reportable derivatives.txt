@@ -1,0 +1,66 @@
+1. **Overall Document Summary:** This document outlines the reporting requirements for derivatives under updated Regulatory Technical Standards (RTS) and Implementing Technical Standards (ITS).  All counterparties must update outstanding derivatives to comply with the new standards within 180 days of the reporting start date, primarily through 'Update', 'Modify', or 'Correct' reports.  Derivatives modified or terminated after the start date must also adhere to the new rules, regardless of their origination date.  The document clarifies specific scenarios like collateral updates, maturing derivatives, and the handling of trade-level vs. position-level derivatives.
+
+2. **Key Entities/Concepts (Nodes):**
+
+    * **Entity/Concept:** Reporting Counterparties
+        * **Description:** Entities obligated to report derivative transactions according to RTS and ITS.
+    * **Entity/Concept:** RTS (Regulatory Technical Standards)
+        * **Description:** Regulatory standards defining the detailed requirements for reporting derivatives.
+    * **Entity/Concept:** ITS (Implementing Technical Standards)
+        * **Description:** Technical standards implementing the RTS for derivative reporting.
+    * **Entity/Concept:** Derivatives
+        * **Description:** Financial contracts whose value is derived from an underlying asset, subject to reporting requirements.
+    * **Entity/Concept:** Reporting Start Date
+        * **Description:** The date on which the new reporting requirements under the RTS and ITS become effective.
+    * **Entity/Concept:** 180-Day Transition Period
+        * **Description:** The period after the reporting start date during which counterparties must update outstanding derivatives.
+    * **Entity/Concept:** 'Update' Report
+        * **Description:** A report type used to bring outstanding derivatives into compliance with the new reporting requirements.
+    * **Entity/Concept:** 'Modify' Report
+        * **Description:** A report type used to communicate changes to the details of a derivative trade.
+    * **Entity/Concept:** 'Correct' Report
+        * **Description:** A report type used to rectify errors in previously reported derivative data.
+    * **Entity/Concept:** Outstanding Derivatives
+        * **Description:** Derivatives that are active or unresolved as of the reporting start date.
+    * **Entity/Concept:** Trade-Level Derivatives
+        * **Description:** Individual derivative transactions.
+    * **Entity/Concept:** Position-Level Derivatives
+        * **Description:** Aggregated derivative positions, potentially comprising multiple trades.
+    * **Entity/Concept:** Terminated/Matured Derivatives
+        * **Description:** Derivatives that have reached their expiration date or have been otherwise closed out.
+
+
+3. **Key Relationships/Interactions (Edges):**
+
+    * **Relationship:** `Reporting Counterparties` --(must comply with)--> `RTS`
+        * **Context/Details:** Counterparties are obligated to follow the reporting requirements defined in the RTS.
+    * **Relationship:** `Reporting Counterparties` --(must comply with)--> `ITS`
+        * **Context/Details:** Counterparties are obligated to follow the reporting requirements defined in the ITS.
+    * **Relationship:** `RTS` --(defines requirements for)--> `Derivatives`
+        * **Context/Details:** The RTS specifies how derivatives must be reported.
+    * **Relationship:** `ITS` --(implements requirements for)--> `Derivatives`
+        * **Context/Details:** The ITS provides the technical implementation details for reporting derivatives.
+    * **Relationship:** `Reporting Counterparties` --(submit)--> `'Update' Report`
+    * **Relationship:** `Reporting Counterparties` --(submit)--> `'Modify' Report`
+    * **Relationship:** `Reporting Counterparties` --(submit)--> `'Correct' Report`
+    * **Relationship:** `'Update' Report` --(updates)--> `Outstanding Derivatives`
+    * **Relationship:** `'Modify' Report` --(modifies)--> `Derivatives`
+    * **Relationship:** `'Correct' Report` --(corrects)--> `Derivatives`
+    * **Relationship:** `Trade-Level Derivatives` --(can be aggregated into)--> `Position-Level Derivatives`
+    * **Relationship:** `180-Day Transition Period` --(defines timeframe for updating)--> `Outstanding Derivatives`
+
+
+4. **Main Themes/Information Clusters:**
+
+    * **Theme/Cluster Title:** Reporting Compliance under Updated Standards
+        * **Summary:** This cluster focuses on the overall requirement for counterparties to comply with the new RTS and ITS reporting standards. It emphasizes the 180-day transition period for updating outstanding derivatives and the use of 'Update', 'Modify', and 'Correct' reports.
+        * **Central Entities/Concepts:** Reporting Counterparties, RTS, ITS, Derivatives, Reporting Start Date, 180-Day Transition Period, 'Update' Report, 'Modify' Report, 'Correct' Report, Outstanding Derivatives
+
+    * **Theme/Cluster Title:** Specific Reporting Scenarios
+        * **Summary:** This cluster addresses specific scenarios related to derivative reporting, including the handling of collateral and valuation updates, matured or terminated derivatives, and the distinction between trade-level and position-level reporting.
+        * **Central Entities/Concepts:**  Trade-Level Derivatives, Position-Level Derivatives, Terminated/Matured Derivatives, 'Update' Report, 'Modify' Report, 'Correct' Report
+
+
+    * **Theme/Cluster Title:** Report Types and their Functions
+        * **Summary:** This cluster details the different report types ('Update', 'Modify', 'Correct') and their specific functions in updating, modifying, or correcting derivative data. It clarifies which report types trigger a full update of derivative details.
+        * **Central Entities/Concepts:** 'Update' Report, 'Modify' Report, 'Correct' Report, Derivatives

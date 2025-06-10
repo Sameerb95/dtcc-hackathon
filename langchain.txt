@@ -1,0 +1,5 @@
+langchain                         0.2.15
+langchain-community               0.2.15
+langchain-core                    0.2.43
+langchain-google-vertexai         1.0.10
+langchain-text-splitters          0.2.4

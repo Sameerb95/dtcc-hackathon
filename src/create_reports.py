@@ -46,7 +46,7 @@ def get_kop_generation_prompt_for_approved_items(): # Renamed for clarity
 
             Input Data
             ----------------------
-            {{Approved Changes}}
+            {{approved_items_data_string}}
 
             Based on the approved changes detailed above, generate the Key Operating Procedures (KOP) document.
             Focus on translating the 'Next Steps' into concrete operational actions.
@@ -181,8 +181,10 @@ def generate_kop_from_approved_items(approved_items_list, output_directory=".", 
         approved_items_data_str += f"  Description: {item.get('description', 'N/A')}\n"
         approved_items_data_str += f"  Recommended Next Steps: {item.get('next_steps', 'N/A')}\n\n"
 
+    print(approved_items_data_str)
+
     messages = []
-    template = get_kop_generation_prompt_for_approved_items() # Use the specific prompt
+    template = get_report_prompt()
     human_template = HumanMessagePromptTemplate.from_template(template)
     messages.append(human_template)
     chat_prompt = ChatPromptTemplate.from_messages(messages)
@@ -221,51 +223,51 @@ def generate_kop_from_approved_items(approved_items_list, output_directory=".", 
         return None
 
 
-if __name__ == "__main__":
-    # Path to your merged JSON file (for testing send_diff_to_llm)
-    merged_json_path = "merged_graph_output.json" # Adjust if necessary
-    test_output_directory = "generated_reports_test" # For testing
+# if __name__ == "__main__":
+#     # Path to your merged JSON file (for testing send_diff_to_llm)
+#     merged_json_path = "merged_graph_output.json" # Adjust if necessary
+#     test_output_directory = "generated_reports_test" # For testing
 
-    if os.path.exists(merged_json_path):
-        with open(merged_json_path, 'r') as f:
-            graph_diff_json_content_string = f.read()
+#     if os.path.exists(merged_json_path):
+#         with open(merged_json_path, 'r') as f:
+#             graph_diff_json_content_string = f.read()
 
-            if graph_diff_json_content_string:
-                print("\n--- Testing KOP generation from DIFF JSON ---")
-                saved_path_diff = send_diff_to_llm(graph_diff_json_content_string, output_directory=test_output_directory)
-                if saved_path_diff:
-                    print(f"KOP from diff saved to: {saved_path_diff}")
-                else:
-                    print("KOP generation from diff failed.")
-            else:
-                print(f"Error: The file '{merged_json_path}' is empty.")
-    else:
-        print(f"Warning: Merged JSON file not found at '{merged_json_path}'. Skipping KOP from diff test.")
+#             if graph_diff_json_content_string:
+#                 print("\n--- Testing KOP generation from DIFF JSON ---")
+#                 saved_path_diff = send_diff_to_llm(graph_diff_json_content_string, output_directory=test_output_directory)
+#                 if saved_path_diff:
+#                     print(f"KOP from diff saved to: {saved_path_diff}")
+#                 else:
+#                     print("KOP generation from diff failed.")
+#             else:
+#                 print(f"Error: The file '{merged_json_path}' is empty.")
+#     else:
+#         print(f"Warning: Merged JSON file not found at '{merged_json_path}'. Skipping KOP from diff test.")
 
-    # Example test for the generate_kop_from_approved_items function
-    print("\n--- Testing KOP generation from APPROVED ITEMS ---")
-    dummy_approved_items = [
-        {
-            "title_display": "(1) Test Item Alpha (High Confidence)",
-            "title_text": "Test Item Alpha",
-            "confidence": "High Confidence",
-            "description": "This is a test description for item Alpha, detailing its changes.",
-            "next_steps": "1. Implement new protocol. 2. Train staff. 3. Monitor results."
-        },
-        {
-            "title_display": "(2) Test Item Beta (Medium Confidence)",
-            "title_text": "Test Item Beta",
-            "confidence": "Medium Confidence",
-            "description": "Item Beta involves updating the user interface.",
-            "next_steps": "1. Design mockups. 2. Get user feedback. 3. Develop and deploy."
-        }
-    ]
-    saved_path_approved = generate_kop_from_approved_items(
-        dummy_approved_items, 
-        output_directory=test_output_directory,
-        filename="Test_KOP_From_Approved.docx"
-    )
-    if saved_path_approved:
-        print(f"KOP from approved items saved to: {saved_path_approved}")
-    else:
-        print("KOP generation from approved items failed.")
+#     # Example test for the generate_kop_from_approved_items function
+#     print("\n--- Testing KOP generation from APPROVED ITEMS ---")
+#     dummy_approved_items = [
+#         {
+#             "title_display": "(1) Test Item Alpha (High Confidence)",
+#             "title_text": "Test Item Alpha",
+#             "confidence": "High Confidence",
+#             "description": "This is a test description for item Alpha, detailing its changes.",
+#             "next_steps": "1. Implement new protocol. 2. Train staff. 3. Monitor results."
+#         },
+#         {
+#             "title_display": "(2) Test Item Beta (Medium Confidence)",
+#             "title_text": "Test Item Beta",
+#             "confidence": "Medium Confidence",
+#             "description": "Item Beta involves updating the user interface.",
+#             "next_steps": "1. Design mockups. 2. Get user feedback. 3. Develop and deploy."
+#         }
+#     ]
+#     saved_path_approved = generate_kop_from_approved_items(
+#         dummy_approved_items, 
+#         output_directory=test_output_directory,
+#         filename="Test_KOP_From_Approved.docx"
+#     )
+#     if saved_path_approved:
+#         print(f"KOP from approved items saved to: {saved_path_approved}")
+#     else:
+#         print("KOP generation from approved items failed.")

@@ -1,63 +1,44 @@
 def get_prompt():
 
-    return """**Objective:** Analyze the provided document to produce a clear summary that includes all key points and their locations (page numbers). The output should be structured to facilitate the easy creation of a knowledge graph or conceptual map with source attribution.
+    template = """
+            You are provided with a page-by-page analysis showing differences between two versions of a document (Version 1 and Version 2). This analysis includes contextual diff snippets marked with `+` for added lines, `-` for removed lines, and leading spaces for unchanged context lines.
 
-        **Document Text:**
-        Section Name
-        --------------------
-        {section_name}
 
-        Text
-        -------------------
-        {text_contents}
+            Input Page-by-Page Analysis Text:
+            ---------------------------------
+            {page_analysis_summary}
 
-        **Instructions:**
+            **Output JSON Format and Structure:**
 
-        Please analyze the document and provide the following information in a structured format:
+            Your primary task is to transform the input analysis into a **valid JSON array**. Each element in this array will be a JSON object representing a distinct change (addition, removal, or modification) identified from the `+` and `-` lines in the diff snippets.
 
-        1.  **Overall Document Summary:**
-            *   A concise summary (3-5 sentences) that clearly captures the main purpose, core arguments, and overall conclusions of the document.
+            **Structure for each JSON object within the array:**
 
-        2.  **Key Entities/Concepts (Nodes):**
-            *   Identify and list the most important entities, concepts, organizations, individuals, processes, or items discussed. These will serve as the primary nodes in a graph.
-            *   For each entity/concept, provide a brief (1-sentence) description of its role or significance within the document and the page number(s) where it is prominently mentioned or defined.
-            *   **Format:**
-                *   **Entity/Concept:** [Name of Entity/Concept 1]
-                    *   **Description:** [Brief description of its role/significance]
-                    *   **Page Number(s):** [e.g., 5, 12-14]
-                *   **Entity/Concept:** [Name of Entity/Concept 2]
-                    *   **Description:** [Brief description of its role/significance]
-                    *   **Page Number(s):** [e.g., 3, 8]
-                *   ... (List all significant entities/concepts)
-
-        3.  **Key Relationships/Interactions (Edges):**
-            *   Describe the significant relationships, interactions, dependencies, influences, or actions between the identified key entities/concepts. These will form the edges in a graph.
-            *   Clearly state the source entity/concept, the target entity/concept, the nature of their relationship, and the page number(s) where this relationship is described or evidenced.
-            *   **Format:**
-                *   **Relationship:** `[Source Entity/Concept]` --([Nature of Relationship, e.g., "influences", "is part of", "regulates", "proposes", "challenges"])--&gt; `[Target Entity/Concept]`
-                    *   **Context/Details:** [Optional: A brief explanation or key detail about this specific relationship as found in the document]
-                    *   **Page Number(s):** [e.g., 7, 10]
-                *   ... (List all significant relationships)
-
-        4.  **Main Themes/Information Clusters:**
-            *   Group related key points, findings, or arguments from the document into distinct themes or information clusters. This helps in understanding the document's structure and can represent higher-level concepts or contexts in a graph.
-            *   For each theme/cluster:
-                *   Provide a clear title for the theme/cluster.
-                *   Write a brief summary (2-3 sentences) of the main information or key points contained within this theme/cluster.
-                *   List the primary entities/concepts (from section 2) that are central to this theme/cluster.
-            *   **Format:**
-                *   **Theme/Cluster Title:** [Title of Theme/Cluster 1]
-                    *   **Summary:** [Brief summary of this theme/cluster and its key points]
-                    *   **Central Entities/Concepts:** [List of relevant entities/concepts]
-                *   **Theme/Cluster Title:** [Title of Theme/Cluster 2]
-                    *   **Summary:** [Brief summary of this theme/cluster and its key points]
-                    *   **Central Entities/Concepts:** [List of relevant entities/concepts]
-                *   ... (List all major themes/clusters)
-
-        **Output Guidelines:**
-        *   Adhere strictly to the headings and formatting provided above.
-        *   Ensure all significant key points from the document are captured within the overall summary, the descriptions of entities/relationships, or the summaries of themes/clusters.
-        *   Include page numbers for entities/concepts and relationships where this information is available and relevant from the source document. If a concept or relationship spans multiple pages, indicate the range or key pages.
-        *   The language should be clear and precise, using terminology from the document where appropriate.
-        *   The ultimate goal is a structured output that not only summarizes the document but also explicitly maps out its core components, their interconnections, and their source locations, making it readily usable for graph construction and verification.
+            ```json
+            {{
+            "source_node": {{
+                "id": "string (Unique identifier for the conceptual source of the change, e.g., 'Page_X_Section_Y_v1', or a more abstract concept like 'Reporting_Guidelines_v1')",
+                "label": "string (User-friendly label, e.g., 'Page X Section Y Change', 'Reporting Guidelines')",
+                "type": "string (Categorization, e.g., 'Document Section', 'Guideline Point', 'Definition')",
+                "description_v1": "string (Describe the state of this conceptual entity or related text in version 1, based on '-' lines or context. If purely an addition, this might be 'N/A' or describe the absence.)",
+                "description_v2": "string (Describe the state of this conceptual entity or related text in version 2, based on '+' lines or context. If purely a removal, this might be 'N/A' or describe the removal.)"
+            }},
+            "target_node": {{
+                "id": "string (Unique identifier for the conceptual target or specific changed element, e.g., 'Ref_No_Field_v2', 'Loan_Security_Clause_v2')",
+                "label": "string (User-friendly label, e.g., 'Reference Number Field', 'Loan Security Clause')",
+                "type": "string (Categorization, e.g., 'Field', 'Clause', 'Text Snippet')",
+                "description_v1": "string (The specific text or concept from version 1 that was changed/removed, taken from '-' lines. If an addition, this is 'N/A'.)",
+                "description_v2": "string (The specific text or concept from version 2 that was added/changed, taken from '+' lines. If a removal, this is 'N/A'.)"
+            }},
+            "relationship": {{
+                "type": "string (Uppercase, e.g., 'MODIFIED_IN', 'ADDED_TO', 'REMOVED_FROM', 'CONTAINS_CHANGE')",
+                "label_v1": "string (Label for v1 state, e.g., 'Contained Old Value', 'Included Clause', 'N/A')",
+                "label_v2": "string (Label for v2 state, e.g., 'Contains New Value', 'Excludes Clause', 'N/A')",
+                "details_v1": "string (Further context for v1, if any, beyond the description_v1 of nodes.)",
+                "details_v2": "string (Further context for v2, if any, beyond the description_v2 of nodes.)",
+                "change_status": "string ('modified' if both '+' and '-' lines are related to the same conceptual change, 'added' if primarily '+' lines, 'removed' if primarily '-' lines)"
+            }},
+            "change_description": "string (A concise, human-readable summary of this specific change, directly reflecting the added/removed/modified text. E.g., 'The Reference Number date was updated from 20 December 2021 to 26 December 2024.' or 'The clause regarding loans secured by cash deposits was removed.')"
+            }}
     """
+    return template

@@ -27,6 +27,8 @@ def main():
     st.sidebar.page_link(page="pages/home.py", label="Home")
     st.sidebar.page_link(page="pages/new_regulation.py", label="Add New Regulation (V1)")
     st.sidebar.page_link(page="pages/changes_review.py", label="review changes")
+    st.sidebar.page_link(page="pages/view_graphs.py", label="graph")
+
     
 
     add_vertical_space(1)

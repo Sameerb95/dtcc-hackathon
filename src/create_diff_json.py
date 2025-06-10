@@ -123,10 +123,25 @@ import traceback
 import streamlit as st
 from langchain_core.prompts import HumanMessagePromptTemplate, ChatPromptTemplate
 from llm_call import VertexAILangchainLLM
-from graph_diff_prompt import get_graph_prompt
+from get_difference_prompt import get_graph_prompt # Assuming this is the correct prompt for graph diff JSON
+from pathlib import Path
 
-def send_data_to_vertex_ai(summary_v1_path, summary_v2_path, output_json_path, use_streamlit_feedback=False):
-    # ... (function content remains the same)
+try:
+    # Assuming new_regulation.py is in src/pages/
+    from pages.new_regulation import add_graph_to_db
+except ImportError:
+    st.warning("Could not import 'add_graph_to_db' from pages.new_regulation. Graph data will not be saved to the database.")
+    add_graph_to_db = None
+
+def send_data_to_vertex_ai(
+    selected_regulation: str,
+    summary_v1_path: str,
+    summary_v2_path: str,
+    output_json_path: str,
+    v2_folder_name: str,
+    v1_chunk_base_name: str,
+    use_streamlit_feedback=False
+):
     try:
         with open(summary_v1_path, 'r', encoding='utf-8') as f1, \
              open(summary_v2_path, 'r', encoding='utf-8') as f2:
@@ -136,12 +151,12 @@ def send_data_to_vertex_ai(summary_v1_path, summary_v2_path, output_json_path, u
         msg = f"Error reading summary files: {e}. V1: '{summary_v1_path}', V2: '{summary_v2_path}'"
         if use_streamlit_feedback: st.error(msg)
         else: print(msg)
-        return None
+        return None, None # Return None for response and path
     except Exception as e:
         msg = f"Unexpected error reading files: {e}"
         if use_streamlit_feedback: st.error(msg)
         else: print(msg)
-        return None
+        return None, None
 
     if not summary_v1_content and not summary_v2_content:
         msg = "Both summary files are empty. No comparison to perform."
@@ -152,20 +167,21 @@ def send_data_to_vertex_ai(summary_v1_path, summary_v2_path, output_json_path, u
             if output_dir and not os.path.exists(output_dir):
                 os.makedirs(output_dir)
             with open(output_json_path, 'w', encoding='utf-8') as f:
-                f.write("{}") 
-            msg_written = f"Wrote empty JSON to {output_json_path} as both summaries were empty."
+                f.write("[]") # Write empty JSON array for graph compatibility
+            msg_written = f"Wrote empty JSON array to {output_json_path} as both summaries were empty."
             if use_streamlit_feedback: st.caption(msg_written)
             else: print(msg_written)
+            return "[]", output_json_path # Return empty JSON and path
         except IOError as e:
             msg_io_error = f"Error writing empty JSON to {output_json_path}: {e}"
             if use_streamlit_feedback: st.error(msg_io_error)
             else: print(msg_io_error)
-        return "{}" 
+        return None, None
 
     compare_msg = "Comparing summaries and sending to Vertex AI for diff generation..."
     if use_streamlit_feedback: st.caption(compare_msg)
     else: print(f"--- {compare_msg} ---")
-    
+
     template_string = get_graph_prompt()
     human_message_prompt = HumanMessagePromptTemplate.from_template(template_string)
     chat_prompt = ChatPromptTemplate.from_messages([human_message_prompt])
@@ -180,7 +196,7 @@ def send_data_to_vertex_ai(summary_v1_path, summary_v2_path, output_json_path, u
         if use_streamlit_feedback: st.error(msg_format_error)
         else: print(msg_format_error)
         traceback.print_exc()
-        return None
+        return None, None
 
     llm = VertexAILangchainLLM({})
     try:
@@ -195,26 +211,34 @@ def send_data_to_vertex_ai(summary_v1_path, summary_v2_path, output_json_path, u
         success_msg = f"Successfully wrote diff JSON to: {output_json_path}"
         if use_streamlit_feedback: st.caption(success_msg)
         else: print(success_msg)
-        return response_content
+
+        if add_graph_to_db:
+            graph_name_for_db = os.path.basename(output_json_path)
+            version_tag_for_db = f"V2_{v2_folder_name}_vs_V1_{v1_chunk_base_name}"
+            add_graph_to_db(
+                regulation_name=selected_regulation,
+                graph_name=graph_name_for_db,
+                graph_path=output_json_path,
+                version_tag=version_tag_for_db
+            )
+            db_save_msg = f"Graph metadata for '{graph_name_for_db}' saved to database."
+            if use_streamlit_feedback: st.caption(db_save_msg)
+            else: print(db_save_msg)
+        else:
+            no_db_msg = "Skipping database save for graph metadata (add_graph_to_db not available)."
+            if use_streamlit_feedback: st.caption(no_db_msg)
+            else: print(no_db_msg)
+
+        return response_content, output_json_path # Return response and the path
     except Exception as e:
         error_msg = f"Error during Vertex AI call or writing JSON for {output_json_path}: {e}"
         if use_streamlit_feedback: st.error(error_msg)
         else: print(error_msg)
         traceback.print_exc()
-        return None
+        return None, None
 
 def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, base_summary_path_v2_arg: str, use_streamlit_feedback=False):
-    """
-    Generates difference JSON files by comparing summaries from V1 and V2 paths.
-    Args:
-        base_summary_path_v1_arg (str): Path to the directory containing V1 summary text files.
-        base_summary_path_v2_arg (str): Path to the directory containing V2 summary text files.
-        use_streamlit_feedback (bool): If True, use Streamlit elements for feedback.
-    """
-    # This path can also be made dynamic if needed, e.g., based on regulation name
     OUTPUT_JSON_DIFF_BASE_PATH = f"resources/{selected_regulation}/graph_diff_json"
-
-    # Use the provided arguments for V1 and V2 summary paths
     BASE_SUMMARY_PATH_V1 = base_summary_path_v1_arg
     BASE_SUMMARY_PATH_V2 = base_summary_path_v2_arg
 
@@ -223,7 +247,6 @@ def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, b
         if use_streamlit_feedback: st.error(msg)
         else: print(msg)
         return False
-        
     if not os.path.exists(BASE_SUMMARY_PATH_V2):
         msg = f"Error: Version 2 summary folder not found at '{BASE_SUMMARY_PATH_V2}'"
         if use_streamlit_feedback: st.error(msg)
@@ -238,10 +261,10 @@ def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, b
 
     try:
         v1_summary_files = sorted([
-            f for f in os.listdir(BASE_SUMMARY_PATH_V1) 
+            f for f in os.listdir(BASE_SUMMARY_PATH_V1)
             if f.endswith(".txt") and os.path.isfile(os.path.join(BASE_SUMMARY_PATH_V1, f))
         ])
-    except Exception as e: # Catching general exception after specific FileNotFoundError check above
+    except Exception as e:
         msg = f"Error listing files in Version 1 summary folder '{BASE_SUMMARY_PATH_V1}': {e}"
         if use_streamlit_feedback: st.error(msg)
         else: print(msg)
@@ -251,8 +274,8 @@ def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, b
         msg = f"No summary files found in {BASE_SUMMARY_PATH_V1}. Cannot generate differences."
         if use_streamlit_feedback: st.warning(msg)
         else: print(msg)
-        return False # Important to return False if no files to process
-    
+        return False # Return False as no processing will occur
+
     msg_found = f"Found {len(v1_summary_files)} summary files in {BASE_SUMMARY_PATH_V1} to process against {BASE_SUMMARY_PATH_V2}."
     if use_streamlit_feedback: st.info(msg_found)
     else: print(msg_found)
@@ -260,7 +283,7 @@ def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, b
     processed_count = 0
     skipped_count = 0
     error_count = 0
-    
+    last_successful_json_path = None # Variable to store the path of the last successful JSON
     progress_bar = None
     if use_streamlit_feedback:
         progress_text = "Processing summary pairs..."
@@ -271,68 +294,86 @@ def generate_all_diffs(selected_regulation:str, base_summary_path_v1_arg: str, b
             progress_bar.progress((i + 1) / len(v1_summary_files), text=f"Processing {summary_filename}...")
 
         summary_v1_filepath = os.path.join(BASE_SUMMARY_PATH_V1, summary_filename)
-        summary_v2_filepath = os.path.join(BASE_SUMMARY_PATH_V2, summary_filename) 
-
-        base_name_without_ext = os.path.splitext(summary_filename)[0]
-        # Store diffs in a subfolder named after the V2 summary directory to keep them organized
-        # e.g., graph_diff_json/AWPR_Version_2_text/chunk_1_diff.json
-        v2_folder_name = os.path.basename(BASE_SUMMARY_PATH_V2) # e.g., "AWPR Version 2_text"
+        summary_v2_filepath = os.path.join(BASE_SUMMARY_PATH_V2, summary_filename)
+        base_name_without_ext = Path(summary_filename).stem
+        v2_folder_name = Path(BASE_SUMMARY_PATH_V2).name
         specific_output_json_dir = os.path.join(OUTPUT_JSON_DIFF_BASE_PATH, v2_folder_name)
         os.makedirs(specific_output_json_dir, exist_ok=True)
         output_json_filename = f"{base_name_without_ext}_diff.json"
         output_json_filepath = os.path.join(specific_output_json_dir, output_json_filename)
 
-
         if use_streamlit_feedback: st.markdown(f"--- \n**Processing:** `{summary_filename}`")
         else: print(f"\nProcessing pair: {summary_filename}")
-        
-        path_logs = [
-            f"  V1 Summary: `{summary_v1_filepath}`",
-            f"  V2 Summary: `{summary_v2_filepath}`",
-            f"  Output JSON: `{output_json_filepath}`"
-        ]
-        for p_log in path_logs:
-            if use_streamlit_feedback: st.caption(p_log)
-            else: print(p_log.replace("`",""))
 
         if os.path.exists(summary_v1_filepath) and os.path.exists(summary_v2_filepath):
-            response = send_data_to_vertex_ai(summary_v1_filepath, summary_v2_filepath, output_json_filepath, use_streamlit_feedback)
-            if response:
+            response, successful_path = send_data_to_vertex_ai(
+                selected_regulation=selected_regulation,
+                summary_v1_path=summary_v1_filepath,
+                summary_v2_path=summary_v2_filepath,
+                output_json_path=output_json_filepath,
+                v2_folder_name=v2_folder_name,
+                v1_chunk_base_name=base_name_without_ext,
+                use_streamlit_feedback=use_streamlit_feedback
+            )
+            if response and successful_path:
                 processed_count += 1
-            else: 
+                last_successful_json_path = successful_path # Update last successful path
+            elif response is not None and successful_path is None: # Case where empty JSON was written due to empty summaries
+                processed_count +=1 # Count it as processed, as a file was written
+                last_successful_json_path = output_json_filepath
+            else:
                 error_count +=1
         else:
             skipped_count += 1
             skip_reasons = []
             if not os.path.exists(summary_v1_filepath):
-                skip_reasons.append(f"V1 summary not found")
+                skip_reasons.append(f"V1 summary not found at {summary_v1_filepath}")
             if not os.path.exists(summary_v2_filepath):
-                skip_reasons.append(f"V2 summary not found")
-            
+                skip_reasons.append(f"V2 summary not found at {summary_v2_filepath}")
             full_skip_msg = f"Skipping `{summary_filename}`: " + "; ".join(skip_reasons)
             if use_streamlit_feedback: st.caption(full_skip_msg)
             else: print(full_skip_msg.replace("`",""))
-    
+
     if use_streamlit_feedback and progress_bar:
-        progress_bar.empty() 
+        progress_bar.empty()
 
     final_msg = f"Finished processing for V2 summaries in '{BASE_SUMMARY_PATH_V2}'. Processed: {processed_count}, Skipped: {skipped_count}, Errors: {error_count}."
     if use_streamlit_feedback:
         if error_count > 0: st.error(final_msg)
         elif skipped_count > 0 and processed_count > 0: st.warning(final_msg)
         elif processed_count > 0 : st.success(final_msg)
-        else: st.warning(final_msg)
+        else: st.warning(final_msg) # Covers case where nothing was processed, skipped, or errored (e.g. no v1 files)
     else: print(f"\n{final_msg}")
-    
-    return processed_count > 0 or (processed_count == 0 and skipped_count == 0 and error_count == 0 and not v1_summary_files)
+
+    if use_streamlit_feedback and processed_count > 0 and last_successful_json_path:
+        st.success("Successfully generated graph differences. Navigating to view graphs...")
+        st.switch_page(f"pages/view_graphs.py?initial_graph_path={last_successful_json_path}")
+    elif use_streamlit_feedback and processed_count == 0:
+        st.warning("No graph differences were successfully generated. Staying on this page.")
+
+    return processed_count > 0
 
 if __name__ == "__main__":
-    # Example usage (won't run when imported, but good for direct testing)
-    # You would need to define these paths for direct script execution
-    test_v1_path = "/Users/shirsama/dtcc-hackathon/dtcc-ai-hackathon-2025/summary/AWPR Version 1_text"
-    test_v2_path = "/Users/shirsama/dtcc-hackathon/dtcc-ai-hackathon-2025/summary/AWPR Version 2_text"
+    test_regulation_name = "AWPR2_Test"
+    test_v1_path = f"resources/{test_regulation_name}/summary/AWPR Version 1_text"
+    test_v2_path = f"resources/{test_regulation_name}/summary/AWPR Version 2_text"
+
+    Path(test_v1_path).mkdir(parents=True, exist_ok=True)
+    Path(test_v2_path).mkdir(parents=True, exist_ok=True)
+
+    # Create dummy files for testing
+    # with open(os.path.join(test_v1_path, "chunk_1.txt"), "w") as f: f.write("V1 content for chunk 1.")
+    # with open(os.path.join(test_v2_path, "chunk_1.txt"), "w") as f: f.write("V2 content for chunk 1.")
+    # with open(os.path.join(test_v1_path, "chunk_2.txt"), "w") as f: f.write("V1 content for chunk 2.")
+    # with open(os.path.join(test_v2_path, "chunk_2.txt"), "w") as f: f.write("V2 content for chunk 2.")
+
+
     if os.path.exists(test_v1_path) and os.path.exists(test_v2_path):
-        print(f"Running direct test for create_diff_json.py with V1: {test_v1_path}, V2: {test_v2_path}")
-        generate_all_diffs(test_v1_path, test_v2_path, use_streamlit_feedback=False)
+        print(f"Running direct test for create_diff_json.py with Regulation: {test_regulation_name}, V1: {test_v1_path}, V2: {test_v2_path}")
+        success = generate_all_diffs(test_regulation_name, test_v1_path, test_v2_path, use_streamlit_feedback=False)
+        if success:
+            print("Test completed. In a Streamlit app, this would switch to view_graphs.py with the last JSON path.")
+        else:
+            print("Test completed, but no diffs were successfully generated or conditions not met for page switch.")
     else:
-        print("Direct test skipped: Default summary paths not found.")
+        print(f"Direct test skipped: Default summary paths not found for regulation '{test_regulation_name}'.")

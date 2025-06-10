@@ -16,7 +16,7 @@ def get_report_prompt():
         Finally, provide an overall concise summary highlighting the most significant (High/Medium confidence) changes.
 
         Input JSON:
-        {difference_json}
+        {approved_items_data_string}
 
             Generate a KOP document with step wise instruction for operational personnel.        """
     return prompt

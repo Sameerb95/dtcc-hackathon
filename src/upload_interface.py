@@ -105,6 +105,9 @@ class UploadProcessor:
         if meaningful_text_status is None: # Error during text extraction/saving
             return False
         
+        # else:
+        #     return True
+        
         if not meaningful_text_status: # No meaningful text found, but extraction itself was okay
             self.st.warning("Skipping chunking and LLM processing due to lack of meaningful text.")
             return True # Processing "succeeded" in the sense that it handled the empty case
